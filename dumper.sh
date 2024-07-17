@@ -71,7 +71,7 @@ fi
 # Sanitize And Generate Folders
 INPUTDIR="${PROJECT_DIR}"/input		# Firmware Download/Preload Directory
 UTILSDIR="${PROJECT_DIR}"/utils		# Contains Supportive Programs
-OUTDIR="${PROJECT_DIR}"/out			# Contains Final Extracted Files
+OUTDIR=/tmp/out						# Contains Final Extracted Files
 TMPDIR="${OUTDIR}"/tmp				# Temporary Working Directory
 
 rm -rf "${TMPDIR}" 2>/dev/null
@@ -133,9 +133,9 @@ AFHDL="${UTILSDIR}"/downloaders/afh_dl.py
 FSCK_EROFS=${UTILSDIR}/bin/fsck.erofs
 
 # Partition List That Are Currently Supported
-PARTITIONS="system system_ext system_other systemex vendor cust odm oem factory product xrom modem dtbo dtb boot vendor_boot recovery tz oppo_product preload_common opproduct reserve india my_preload my_odm my_stock my_operator my_country my_product my_company my_engineering my_heytap my_custom my_manifest my_carrier my_region my_bigball my_version special_preload system_dlkm vendor_dlkm odm_dlkm init_boot vendor_kernel_boot odmko socko nt_log mi_ext hw_product preavs preavs preload version"
+PARTITIONS="system system_ext system_other systemex vendor cust odm oem factory product xrom dtbo dtb boot vendor_boot recovery tz oppo_product preload_common opproduct reserve india my_preload my_odm my_stock my_operator my_country my_product my_company my_engineering my_heytap my_custom my_manifest my_carrier my_region my_bigball my_version special_preload system_dlkm vendor_dlkm odm_dlkm init_boot vendor_kernel_boot odmko socko nt_log mi_ext hw_product preavs preavs preload version tr_product"
 EXT4PARTITIONS="system vendor cust odm oem factory product xrom systemex oppo_product preload_common"
-OTHERPARTITIONS="tz.mbn:tz tz.img:tz modem.img:modem md1img.img:modem NON-HLOS:modem boot-verified.img:boot recovery-verified.img:recovery dtbo-verified.img:dtbo"
+OTHERPARTITIONS="tz.mbn:tz tz.img:tz modem.img:modem NON-HLOS:modem boot-verified.img:boot recovery-verified.img:recovery dtbo-verified.img:dtbo"
 
 # NOTE: $(pwd) is ${PROJECT_DIR}
 if echo "${1}" | grep -q "${PROJECT_DIR}/input" && [[ $(find "${INPUTDIR}" -maxdepth 1 -type f -size +10M -print | wc -l) -gt 1 ]]; then
@@ -892,10 +892,12 @@ id=$(grep -m1 -oP "(?<=^ro.build.id=).*" -hs {system,system/system,vendor}/build
 tags=$(grep -m1 -oP "(?<=^ro.build.tags=).*" -hs {system,system/system,vendor}/build*.prop)
 [[ -z "${tags}" ]] && tags=$(grep -m1 -oP "(?<=^ro.vendor.build.tags=).*" -hs vendor/build*.prop)
 [[ -z "${tags}" ]] && tags=$(grep -m1 -oP "(?<=^ro.system.build.tags=).*" -hs {system,system/system}/build*.prop)
-platform=$(grep -m1 -oP "(?<=^ro.board.platform=).*" -hs {system,system/system,vendor}/build*.prop | head -1)
+platform=$(grep -m1 -oP "(?<=^ro.vendor.mediatek.platform=).*" -hs vendor/build.prop | head -1)
+[[ -z "${platform}" ]] && platform=$(grep -m1 -oP "(?<=^ro.board.platform=).*" -hs {system,system/system,vendor}/build*.prop | head -1)
 [[ -z "${platform}" ]] && platform=$(grep -m1 -oP "(?<=^ro.vendor.board.platform=).*" -hs vendor/build*.prop)
 [[ -z "${platform}" ]] && platform=$(grep -m1 -oP "(?<=^ro.system.board.platform=).*" -hs {system,system/system}/build*.prop)
-manufacturer=$(grep -m1 -oP "(?<=^ro.product.manufacturer=).*" -hs {system,system/system,vendor}/build*.prop | head -1)
+manufacturer=$(grep -m1 -oP "(?<=^ro.product.system_ext.manufacturer=).*" -hs system_ext/etc/build.prop | head -1)
+[[ -z "${manufacturer}" ]] && manufacturer=$(grep -m1 -oP "(?<=^ro.product.manufacturer=).*" -hs {system,system/system,vendor}/build*.prop | head -1)
 [[ -z "${manufacturer}" ]] && manufacturer=$(grep -m1 -oP "(?<=^ro.product.brand.sub=).*" -hs system/system/euclid/my_product/build*.prop)
 [[ -z "${manufacturer}" ]] && manufacturer=$(grep -m1 -oP "(?<=^ro.vendor.product.manufacturer=).*" -hs vendor/build*.prop | head -1)
 [[ -z "${manufacturer}" ]] && manufacturer=$(grep -m1 -oP "(?<=^ro.product.vendor.manufacturer=).*" -hs vendor/build*.prop | head -1)
@@ -908,7 +910,8 @@ manufacturer=$(grep -m1 -oP "(?<=^ro.product.manufacturer=).*" -hs {system,syste
 [[ -z "${manufacturer}" ]] && manufacturer=$(grep -m1 -oP "(?<=^ro.product.product.manufacturer=).*" -hs vendor/euclid/product/build*.prop)
 [[ -z "${manufacturer}" ]] && manufacturer=$(grep -m1 -oP "(?<=^ro.product.vendor.manufacturer=).*" -hs vendor/build*.prop)
 [[ -z "${manufacturer}" ]] && manufacturer=$(grep -m1 -oP "(?<=^ro.product.system.manufacturer=).*" -hs {system,system/system}/build*.prop)
-fingerprint=$(grep -m1 -oP "(?<=^ro.build.fingerprint=).*" -hs {system,system/system}/build*.prop)
+fingerprint=$(grep -m1 -oP "(?<=^ro.system_ext.build.fingerprint=).*" -hs system_ext/etc/build.prop)
+[[ -z "${fingerprint}" ]] && fingerprint=$(grep -m1 -oP "(?<=^ro.build.fingerprint=).*" -hs {system,system/system}/build*.prop | head -1)
 [[ -z "${fingerprint}" ]] && fingerprint=$(grep -m1 -oP "(?<=^ro.vendor.build.fingerprint=).*" -hs vendor/build*.prop | head -1)
 [[ -z "${fingerprint}" ]] && fingerprint=$(grep -m1 -oP "(?<=^ro.system.build.fingerprint=).*" -hs {system,system/system}/build*.prop)
 [[ -z "${fingerprint}" ]] && fingerprint=$(grep -m1 -oP "(?<=^ro.product.build.fingerprint=).*" -hs product/build*.prop)
@@ -916,7 +919,8 @@ fingerprint=$(grep -m1 -oP "(?<=^ro.build.fingerprint=).*" -hs {system,system/sy
 [[ -z "${fingerprint}" ]] && fingerprint=$(grep -m1 -oP "(?<=^ro.system.build.fingerprint=).*" -hs my_product/build.prop)
 [[ -z "${fingerprint}" ]] && fingerprint=$(grep -m1 -oP "(?<=^ro.vendor.build.fingerprint=).*" -hs my_product/build.prop)
 [[ -z "${fingerprint}" ]] && fingerprint=$(grep -m1 -oP "(?<=^ro.bootimage.build.fingerprint=).*" -hs vendor/build.prop)
-brand=$(grep -m1 -oP "(?<=^ro.product.brand=).*" -hs {system,system/system,vendor}/build*.prop | head -1)
+brand=$(grep -m1 -oP "(?<=^ro.product.system_ext.brand=).*" -hs system_ext/etc/build.prop | head -1)
+[[ -z "${brand}" ]] && brand=$(grep -m1 -oP "(?<=^ro.product.brand=).*" -hs {system,system/system,vendor}/build*.prop)
 [[ -z "${brand}" ]] && brand=$(grep -m1 -oP "(?<=^ro.product.brand.sub=).*" -hs system/system/euclid/my_product/build*.prop)
 [[ -z "${brand}" ]] && brand=$(grep -m1 -oP "(?<=^ro.product.vendor.brand=).*" -hs vendor/build*.prop | head -1)
 [[ -z "${brand}" ]] && brand=$(grep -m1 -oP "(?<=^ro.vendor.product.brand=).*" -hs vendor/build*.prop | head -1)
@@ -927,7 +931,8 @@ brand=$(grep -m1 -oP "(?<=^ro.product.brand=).*" -hs {system,system/system,vendo
 [[ -z "${brand}" ]] && brand=$(grep -m1 -oP "(?<=^ro.product.brand=).*" -hs {oppo_product,my_product}/build*.prop | head -1)
 [[ -z "${brand}" ]] && brand=$(grep -m1 -oP "(?<=^ro.product.brand=).*" -hs vendor/euclid/*/build.prop | head -1)
 [[ -z "${brand}" ]] && brand=$(echo "$fingerprint" | cut -d'/' -f1)
-codename=$(grep -m1 -oP "(?<=^ro.product.device=).*" -hs {vendor,system,system/system}/build*.prop | head -1)
+codename=$(grep -m1 -oP "(?<=^ro.product.product.device=).*" -hs product/etc/build.prop | head -1)
+[[ -z "${codename}" ]] && codename=$(grep -m1 -oP "(?<=^ro.product.device=).*" -hs {vendor,system,system/system}/build*.prop | head -1)
 [[ -z "${codename}" ]] && codename=$(grep -m1 -oP "(?<=^ro.vendor.product.device.oem=).*" -hs vendor/euclid/odm/build.prop | head -1)
 [[ -z "${codename}" ]] && codename=$(grep -m1 -oP "(?<=^ro.product.vendor.device=).*" -hs vendor/build*.prop | head -1)
 [[ -z "${codename}" ]] && codename=$(grep -m1 -oP "(?<=^ro.vendor.product.device=).*" -hs vendor/build*.prop | head -1)
@@ -961,31 +966,65 @@ abilist=$(grep -m1 -oP "(?<=^ro.product.cpu.abilist=).*" -hs {system,system/syst
 [[ -z "${abilist}" ]] && abilist=$(grep -m1 -oP "(?<=^ro.vendor.product.cpu.abilist=).*" -hs vendor/build*.prop)
 locale=$(grep -m1 -oP "(?<=^ro.product.locale=).*" -hs {system,system/system}/build*.prop | head -1)
 [[ -z "${locale}" ]] && locale=undefined
-density=$(grep -m1 -oP "(?<=^ro.sf.lcd_density=).*" -hs {system,system/system}/build*.prop | head -1)
+density=$(grep -m1 -oP "(?<=^ro.sf.lcd_density=).*" -hs {vendor,system,system/system}/build*.prop | head -1)
 [[ -z "${density}" ]] && density=undefined
 is_ab=$(grep -m1 -oP "(?<=^ro.build.ab_update=).*" -hs {system,system/system,vendor}/build*.prop)
 [[ -z "${is_ab}" ]] && is_ab="false"
 treble_support=$(grep -m1 -oP "(?<=^ro.treble.enabled=).*" -hs {system,system/system}/build*.prop)
 [[ -z "${treble_support}" ]] && treble_support="false"
-otaver=$(grep -m1 -oP "(?<=^ro.build.version.ota=).*" -hs {vendor/euclid/product,oppo_product,system,system/system}/build*.prop | head -1)
-[[ ! -z "${otaver}" && -z "${fingerprint}" ]] && branch=$(echo "${otaver}" | tr ' ' '-')
-[[ -z "${otaver}" ]] && otaver=$(grep -m1 -oP "(?<=^ro.build.fota.version=).*" -hs {system,system/system}/build*.prop | head -1)
-[[ -z "${branch}" ]] && branch=$(echo "${description}" | tr ' ' '-')
+branch=master
+transname=$(grep -m1 -oP "(?<=^ro.product.product.tran.device.name.default=).*" -hs product/etc/build.prop | head -1)
+[[ -z "${transname}" ]] && transname="undefined"
+osver=$(grep -m1 -oP "(?<=^ro.os.version.release=).*" -hs product/etc/build.prop | head -1)
+[[ -z "${osver}" ]] && osver="undefined"
+xosver=$(grep -m1 -oP "(?<=^ro.tranos.version=).*" -hs product/etc/build.prop | head -1)
+[[ -z "${xosver}" ]] && xosver="undefined"
+sec_patch=$(grep -m1 -oP "(?<=^ro.build.version.security_patch=).*" -hs {system,system/system}/build*.prop | head -1)
+[[ -z "${sec_patch}" ]] && sec_patch="undefined"
+xosid=$(grep -m1 -oP "(?<=^ro.build.display.id=).*" -hs tr_product/etc/build.prop | head -1)
+[[ -z "${xosid}" ]] && xosid=$(grep -m1 -oP "(?<=^ro.build.display.id=).*" -hs product/etc/build.prop | head -1)
+[[ -z "${xosid}" ]] && xosid="undefined"
 
 if [[ "$PUSH_TO_GITLAB" = true ]]; then
 	rm -rf .github_token
-	repo=$(printf "${brand}" | tr '[:upper:]' '[:lower:]' && echo -e "/${codename}")
+	repo=$(printf "${brand}" && echo -e "/${codename}")
 else
 	rm -rf .gitlab_token
-	repo=$(echo "${brand}"_"${codename}"_dump | tr '[:upper:]' '[:lower:]')
+	repo=$(echo "${brand}/""${codename}"_dump)
 fi
 
 platform=$(echo "${platform}" | tr '[:upper:]' '[:lower:]' | tr -dc '[:print:]' | tr '_' '-' | cut -c 1-35)
 top_codename=$(echo "${codename}" | tr '[:upper:]' '[:lower:]' | tr -dc '[:print:]' | tr '_' '-' | cut -c 1-35)
-manufacturer=$(echo "${manufacturer}" | tr '[:upper:]' '[:lower:]' | tr -dc '[:print:]' | tr '_' '-' | cut -c 1-35)
+manufacturer=$(echo "${manufacturer}" | tr -dc '[:print:]' | tr '_' '-' | cut -c 1-35)
 [ -f "bootRE/ikconfig" ] && kernel_version=$(cat bootRE/ikconfig | grep "Kernel Configuration" | head -1 | awk '{print $3}')
+
+# Get transsion chipset name
+TSFILE=product/overlay/TranSettingsApkResOverlay/TranSettingsApkResOverlay.apk
+if [ -f "$TSFILE" ]; then
+  apktool d $TSFILE
+  ts_chipset=" ($(grep -oP '(?<=<string name="cpu_rate_cores">).*(?=</string>)' -ar TranSettingsApkResOverlay/res/values/strings.xml))"
+  rm -rf TranSettingsApkResOverlay
+fi
+
 # Repo README File
-printf "## %s\n- Manufacturer: %s\n- Platform: %s\n- Codename: %s\n- Brand: %s\n- Flavor: %s\n- Release Version: %s\n- Kernel Version: %s\n- Id: %s\n- Incremental: %s\n- Tags: %s\n- CPU Abilist: %s\n- A/B Device: %s\n- Treble Device: %s\n- Locale: %s\n- Screen Density: %s\n- Fingerprint: %s\n- OTA version: %s\n- Branch: %s\n- Repo: %s\n" "${description}" "${manufacturer}" "${platform}" "${codename}" "${brand}" "${flavor}" "${release}" "${kernel_version}" "${id}" "${incremental}" "${tags}" "${abilist}" "${is_ab}" "${treble_support}" "${locale}" "${density}" "${fingerprint}" "${otaver}" "${branch}" "${repo}" > "${OUTDIR}"/README.md
+cat <<EOF > "${OUTDIR}"/README.md
+## FIRMWARE DUMP
+### ${description}
+- Transsion Name: ${transname}
+- TranOS Build: ${xosid}
+- TranOS Version: ${xosver}
+- Brand: ${manufacturer}
+- Model: ${codename}
+- Platform: ${platform}${ts_chipset}
+- Android Build: ${id}
+- Android Version: ${release}
+- Kernel Version: ${kernel_version}
+- Security Patch: ${sec_patch}
+- CPU Abilist: ${abilist}
+- A/B Device: ${is_ab}
+- Treble Device: ${treble_support}
+- Screen Density: ${density}
+EOF
 cat "${OUTDIR}"/README.md
 
 # Generate TWRP Trees
@@ -995,7 +1034,7 @@ if [[ "$is_ab" = true ]]; then
 		printf "Legacy A/B with recovery partition detected...\n"
 		twrpimg="recovery.img"
 	else
-	twrpimg="boot.img"
+	twrpimg="vendor_boot.img"
 	fi
 else
 	twrpimg="recovery.img"
@@ -1017,17 +1056,17 @@ chmod -R u+rwX ./*		#ensure final permissions
 find "$OUTDIR" -type f -printf '%P\n' | sort | grep -v ".git/" > "$OUTDIR"/all_files.txt
 
 # Generate LineageOS Trees
-if [[ "$treble_support" = true ]]; then
-        aospdtout="lineage-device-tree"
-        mkdir -p $aospdtout
-        python3 -m aospdtgen $OUTDIR -o $aospdtout
+#if [[ "$treble_support" = true ]]; then
+#        aospdtout="lineage-device-tree"
+#        mkdir -p $aospdtout
+#        python3 -m aospdtgen $OUTDIR -o $aospdtout
 
         # Remove all .git directories from aospdtout
-        rm -rf $(find $aospdtout -type d -name ".git")
+#        rm -rf $(find $aospdtout -type d -name ".git")
 
         # Regenerate all_files.txt
-        find "$OUTDIR" -type f -printf '%P\n' | sort | grep -v ".git/" > "$OUTDIR"/all_files.txt
-fi
+#        find "$OUTDIR" -type f -printf '%P\n' | sort | grep -v ".git/" > "$OUTDIR"/all_files.txt
+#fi
 
 # Generate Files having the sha1sum values of the Blobs
 function write_sha1sum(){
@@ -1076,26 +1115,26 @@ function write_sha1sum(){
 }
 
 # Generate proprietary-files.txt
-printf "Generating proprietary-files.txt...\n"
-bash "${UTILSDIR}"/android_tools/tools/proprietary-files.sh "${OUTDIR}"/all_files.txt >/dev/null
-printf "# All blobs from %s, unless pinned\n" "${description}" > "${OUTDIR}"/proprietary-files.txt
-cat "${UTILSDIR}"/android_tools/working/proprietary-files.txt >> "${OUTDIR}"/proprietary-files.txt
+#printf "Generating proprietary-files.txt...\n"
+#bash "${UTILSDIR}"/android_tools/tools/proprietary-files.sh "${OUTDIR}"/all_files.txt >/dev/null
+#printf "# All blobs from %s, unless pinned\n" "${description}" > "${OUTDIR}"/proprietary-files.txt
+#cat "${UTILSDIR}"/android_tools/working/proprietary-files.txt >> "${OUTDIR}"/proprietary-files.txt
 
 # Generate proprietary-files.sha1
-printf "Generating proprietary-files.sha1...\n"
-printf "# All blobs are from \"%s\" and are pinned with sha1sum values\n" "${description}" > "${OUTDIR}"/proprietary-files.sha1
-write_sha1sum ${UTILSDIR}/android_tools/working/proprietary-files.{txt,sha1}
-cat "${UTILSDIR}"/android_tools/working/proprietary-files.sha1 >> "${OUTDIR}"/proprietary-files.sha1
+#printf "Generating proprietary-files.sha1...\n"
+#printf "# All blobs are from \"%s\" and are pinned with sha1sum values\n" "${description}" > "${OUTDIR}"/proprietary-files.sha1
+#write_sha1sum ${UTILSDIR}/android_tools/working/proprietary-files.{txt,sha1}
+#cat "${UTILSDIR}"/android_tools/working/proprietary-files.sha1 >> "${OUTDIR}"/proprietary-files.sha1
 
 # Stash the changes done at ${UTILSDIR}/android_tools
 git -C "${UTILSDIR}"/android_tools/ add --all
 git -C "${UTILSDIR}"/android_tools/ stash
 
 # Generate all_files.sha1
-printf "Generating all_files.sha1...\n"
-write_sha1sum "$OUTDIR"/all_files.{txt,sha1.tmp}
-( cat "$OUTDIR"/all_files.sha1.tmp | grep -v all_files.txt ) > "$OUTDIR"/all_files.sha1		# all_files.txt will be regenerated
-rm -rf "$OUTDIR"/all_files.sha1.tmp
+#printf "Generating all_files.sha1...\n"
+#write_sha1sum "$OUTDIR"/all_files.{txt,sha1.tmp}
+#( cat "$OUTDIR"/all_files.sha1.tmp | grep -v all_files.txt ) > "$OUTDIR"/all_files.sha1		# all_files.txt will be regenerated
+#rm -rf "$OUTDIR"/all_files.sha1.tmp
 
 # Regenerate all_files.txt
 printf "Generating all_files.txt...\n"
@@ -1117,9 +1156,9 @@ if [[ -s "${PROJECT_DIR}"/.github_token ]]; then
 	curl -sf "https://raw.githubusercontent.com/${GIT_ORG}/${repo}/${branch}/all_files.txt" 2>/dev/null && { printf "Firmware already dumped!\nGo to https://github.com/%s/%s/tree/%s\n" "${GIT_ORG}" "${repo}" "${branch}" && exit 1; }
 	# Remove The Journal File Inside System/Vendor
 	find . -mindepth 2 -type d -name "\[SYS\]" -exec rm -rf {} \; 2>/dev/null
-	# Files larger than 62MB will be split into 47MB parts as *.aa, *.ab, etc.
+	# Files larger than 99MB will be split into 47MB parts as *.aa, *.ab, etc.
 	mkdir -p "${TMPDIR}" 2>/dev/null
-	find . -size +62M | cut -d'/' -f'2-' >| "${TMPDIR}"/.largefiles
+	find . -size +99M | cut -d'/' -f'2-' >| "${TMPDIR}"/.largefiles
 	if [[ -s "${TMPDIR}"/.largefiles ]]; then
 		printf '#!/bin/bash\n\n' > join_split_files.sh
 		while read -r l; do
@@ -1149,9 +1188,12 @@ if [[ -s "${PROJECT_DIR}"/.github_token ]]; then
 	printf "\nPushing to %s via HTTPS...\nBranch:%s\n" "https://github.com/${GIT_ORG}/${repo}.git" "${branch}"
 	sleep 1
 	git remote add origin https://${GITHUB_TOKEN}@github.com/${GIT_ORG}/${repo}.git "${branch}"
-	git add -- . ':!system/' ':!vendor/'
+	git add -- . ':!system/' ':!vendor/' ':!product/'
 	git commit -sm "Add extras for ${description}"
 	git push -u origin "${branch}"
+        git add product/
+        git commit -sm "Add product for ${description}"
+        git push -u origin "${branch}"
 	git add vendor/
 	git commit -sm "Add vendor for ${description}"
 	git push -u origin "${branch}"
@@ -1208,6 +1250,22 @@ elif [[ -s "${PROJECT_DIR}"/.gitlab_token ]]; then
 
 	# Remove The Journal File Inside System/Vendor
 	find . -mindepth 2 -type d -name "\[SYS\]" -exec rm -rf {} \; 2>/dev/null
+
+	# Files larger than 99MB will be split into 47MB parts as *.aa, *.ab, etc.
+	mkdir -p "${TMPDIR}" 2>/dev/null
+	find . -size +99M | cut -d'/' -f'2-' >| "${TMPDIR}"/.largefiles
+	if [[ -s "${TMPDIR}"/.largefiles ]]; then
+		printf '#!/bin/bash\n\n' > join_split_files.sh
+		while read -r l; do
+			split -b 47M "${l}" "${l}".
+			rm -f "${l}" 2>/dev/null
+			printf "cat %s.* 2>/dev/null >> %s\n" "${l}" "${l}" >> join_split_files.sh
+			printf "rm -f %s.* 2>/dev/null\n" "${l}" >> join_split_files.sh
+		done < "${TMPDIR}"/.largefiles
+		chmod a+x join_split_files.sh 2>/dev/null
+	fi
+	rm -rf "${TMPDIR}" 2>/dev/null
+
 	printf "\nFinal Repository Should Look Like...\n" && ls -lAog
 	printf "\n\nStarting Git Init...\n"
 
@@ -1216,8 +1274,8 @@ elif [[ -s "${PROJECT_DIR}"/.gitlab_token ]]; then
 	git checkout -b "${branch}" || { git checkout -b "${incremental}" && export branch="${incremental}"; }
 	find . \( -name "*sensetime*" -o -name "*.lic" \) | cut -d'/' -f'2-' >| .gitignore
 	[[ ! -s .gitignore ]] && rm .gitignore
-	[[ -z "$(git config --get user.email)" ]] && git config user.email "guptasushrut@gmail.com"
-	[[ -z "$(git config --get user.name)" ]] && git config user.name "Sushrut1101"
+	[[ -z "$(git config --get user.email)" ]] && git config user.email "ramanarubp@gmail.com"
+	[[ -z "$(git config --get user.name)" ]] && git config user.name "Rama Bondan Prakoso"
 
 	# Create Subgroup
 	GRP_ID=$(curl -s --request GET --header "PRIVATE-TOKEN: ${GITLAB_TOKEN}" "${GITLAB_HOST}/api/v4/groups/${GIT_ORG}" | jq -r '.id')
@@ -1247,7 +1305,7 @@ elif [[ -s "${PROJECT_DIR}"/.gitlab_token ]]; then
 	curl -s \
 	--header "PRIVATE-TOKEN: ${GITLAB_TOKEN}" \
 	-X POST \
-	"${GITLAB_HOST}/api/v4/projects?name=${codename}&namespace_id=${SUBGRP_ID}&visibility=public"
+	"${GITLAB_HOST}/api/v4/projects?name=${codename}_dump&description=${transname}&namespace_id=${SUBGRP_ID}&visibility=public"
 
 	# Get Project/Repo ID
 	get_gitlab_project_id(){
@@ -1276,15 +1334,30 @@ elif [[ -s "${PROJECT_DIR}"/.gitlab_token ]]; then
 	printf "\n"
 
 	# Push to GitLab
-	while [[ ! $(curl -sL "${GITLAB_HOST}/${GIT_ORG}/${repo}/-/raw/${branch}/all_files.txt" | grep "all_files.txt") ]]
-	do
-		printf "\nPushing to %s via SSH...\nBranch:%s\n" "${GITLAB_HOST}/${GIT_ORG}/${repo}.git" "${branch}"
-		sleep 1
-		git add --all
-		git commit -asm "Add ${description}"
-		git push -u origin "${branch}"
-		sleep 1
-	done
+	printf "\nPushing to %s via SSH...\nBranch:%s\n" "${GITLAB_HOST}/${GIT_ORG}/${repo}.git" "${branch}"
+	sleep 1
+	git add README.md
+	git commit -sm "Add README.md for ${description}"
+	git push -f origin "${branch}"
+	git add -- . ':!system/' ':!vendor/' ':!product/' ':!tr_product/'
+	git commit -sm "Add extras for ${description}"
+	git push -f origin "${branch}"
+	git add product/
+	git commit -sm "Add product for ${description}"
+	git push origin "${branch}"
+	git add tr_product/
+	git commit -sm "Add tr_product for ${description}"
+	git push origin "${branch}"
+	git add vendor/
+	git commit -sm "Add vendor for ${description}"
+	git push origin "${branch}"
+	git add $(find -type f -name '*.apk')
+	git commit -sm "Add apps for ${description}"
+	git push origin "${branch}"
+	git add system/
+	git commit -sm "Add system for ${description}"
+	git push origin "${branch}"
+	sleep 1
 
 	# Update the Default Branch
 	curl	--request PUT \
@@ -1302,13 +1375,18 @@ elif [[ -s "${PROJECT_DIR}"/.gitlab_token ]]; then
 			CHAT_ID="@DumprXDumps"
 		fi
 		printf "Sending telegram notification...\n"
-		printf "<b>Brand: %s</b>" "${brand}" >| "${OUTDIR}"/tg.html
+		printf "<b>DumprX Info</b>" >| "${OUTDIR}"/tg.html
 		{
-			printf "\n<b>Device: %s</b>" "${codename}"
-			printf "\n<b>Platform: %s</b>" "${platform}"
-			printf "\n<b>Android Version:</b> %s" "${release}"
-			[ ! -z "${kernel_version}" ] && printf "\n<b>Kernel Version:</b> %s" "${kernel_version}"
-			printf "\n<b>Fingerprint:</b> %s" "${fingerprint}"
+			printf "\n<b>Transsion Name: %s</b>" "${transname}"
+			printf "\n<b>TranOS Build: %s</b>" "${xosid}"
+			printf "\n<b>TranOS Ver: %s</b>" "${xosver}"
+			printf "\n<b>Brand: %s</b>" "${manufacturer}"
+			printf "\n<b>Model: %s</b>" "${codename}"
+			printf "\n<b>Platform: %s</b>" "${platform}${ts_chipset}"
+			printf "\n<b>Android Build: %s</b>" "${id}"
+			printf "\n<b>Android Ver: %s</b>" "${release}"
+			[ ! -z "${kernel_version}" ] && printf "\n<b>Kernel Ver: %s</b>" "${kernel_version}"
+			printf "\n<b>Security Patch: %s</b>" "${sec_patch}"
 			printf "\n<a href=\"${GITLAB_HOST}/%s/%s/-/tree/%s/\">Gitlab Tree</a>" "${GIT_ORG}" "${repo}" "${branch}"
 		} >> "${OUTDIR}"/tg.html
 		TEXT=$(< "${OUTDIR}"/tg.html)
