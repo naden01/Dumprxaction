@@ -1003,6 +1003,7 @@ TSFILE=product/overlay/TranSettingsApkResOverlay/TranSettingsApkResOverlay.apk
 if [ -f "$TSFILE" ]; then
   apktool d $TSFILE
   ts_chipset=" ($(grep -oP '(?<=<string name="cpu_rate_cores">).*(?=</string>)' -ar TranSettingsApkResOverlay/res/values/strings.xml))"
+  cp TranSettingsApkResOverlay/res/values/strings.xml TranSettingsApkResOverlay.xml
   rm -rf TranSettingsApkResOverlay
 fi
 
@@ -1034,7 +1035,7 @@ if [[ "$is_ab" = true ]]; then
 		printf "Legacy A/B with recovery partition detected...\n"
 		twrpimg="recovery.img"
 	else
-	twrpimg="vendor_boot.img"
+	twrpimg="boot.img"
 	fi
 else
 	twrpimg="recovery.img"
@@ -1044,6 +1045,12 @@ if [[ -f ${twrpimg} ]]; then
 	python3 -m twrpdtgen $twrpimg -o $twrpdtout
 	if [[ "$?" = 0 ]]; then
 		[[ ! -e "${OUTDIR}"/twrp-device-tree/README.md ]] && curl https://raw.githubusercontent.com/wiki/SebaUbuntu/TWRP-device-tree-generator/4.-Build-TWRP-from-source.md > ${twrpdtout}/README.md
+	else
+		twrpimg="vendor_boot.img"
+		python3 -m twrpdtgen $twrpimg -o $twrpdtout
+		if [[ "$?" = 0 ]]; then
+			[[ ! -e "${OUTDIR}"/twrp-device-tree/README.md ]] && curl https://raw.githubusercontent.com/wiki/SebaUbuntu/TWRP-device-tree-generator/4.-Build-TWRP-from-source.md > ${twrpdtout}/README.md
+		fi
 	fi
 fi
 
@@ -1246,7 +1253,7 @@ elif [[ -s "${PROJECT_DIR}"/.gitlab_token ]]; then
 	GITLAB_HOST="https://${GITLAB_INSTANCE}"
 
 	# Check if already dumped or not
-	[[ $(curl -sL "${GITLAB_HOST}/${GIT_ORG}/${repo}/-/raw/${branch}/all_files.txt" | grep "all_files.txt") ]] && { printf "Firmware already dumped!\nGo to https://"$GITLAB_INSTANCE"/${GIT_ORG}/${repo}/-/tree/${branch}\n" && exit 1; }
+	#[[ $(curl -sL "${GITLAB_HOST}/${GIT_ORG}/${repo}/-/raw/${branch}/all_files.txt" | grep "all_files.txt") ]] && { printf "Firmware already dumped!\nGo to https://"$GITLAB_INSTANCE"/${GIT_ORG}/${repo}/-/tree/${branch}\n" && exit 1; }
 
 	# Remove The Journal File Inside System/Vendor
 	find . -mindepth 2 -type d -name "\[SYS\]" -exec rm -rf {} \; 2>/dev/null
