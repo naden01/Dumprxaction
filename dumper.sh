@@ -1343,27 +1343,45 @@ elif [[ -s "${PROJECT_DIR}"/.gitlab_token ]]; then
 	# Push to GitLab
 	printf "\nPushing to %s via SSH...\nBranch:%s\n" "${GITLAB_HOST}/${GIT_ORG}/${repo}.git" "${branch}"
 	sleep 1
+	retry_push() {
+		while true; do
+			git push "$@"
+			if [ $? -eq 0 ]; then
+				break
+			else
+				echo "Push failed, retrying..."
+				sleep 2
+			fi
+		done
+	}
+
 	git add README.md
 	git commit -sm "Add README.md for ${description}"
-	git push -f origin "${branch}"
+	retry_push -f origin "${branch}"
+
 	git add -- . ':!system/' ':!vendor/' ':!product/' ':!tr_product/'
 	git commit -sm "Add extras for ${description}"
-	git push -f origin "${branch}"
+	retry_push -f origin "${branch}"
+
 	git add product/
 	git commit -sm "Add product for ${description}"
-	git push origin "${branch}"
+	retry_push origin "${branch}"
+
 	git add tr_product/
 	git commit -sm "Add tr_product for ${description}"
-	git push origin "${branch}"
+	retry_push origin "${branch}"
+
 	git add vendor/
 	git commit -sm "Add vendor for ${description}"
-	git push origin "${branch}"
+	retry_push origin "${branch}"
+
 	git add $(find -type f -name '*.apk')
 	git commit -sm "Add apps for ${description}"
-	git push origin "${branch}"
+	retry_push origin "${branch}"
+
 	git add system/
 	git commit -sm "Add system for ${description}"
-	git push origin "${branch}"
+	retry_push origin "${branch}"
 	sleep 1
 
 	# Update the Default Branch
