@@ -965,25 +965,18 @@ incremental=$(grep -m1 -oP "(?<=^ro.build.version.incremental=).*" -hs {system,s
 abilist=$(grep -m1 -oP "(?<=^ro.product.cpu.abilist=).*" -hs {system,system/system}/build*.prop | head -1)
 [[ -z "${abilist}" ]] && abilist=$(grep -m1 -oP "(?<=^ro.vendor.product.cpu.abilist=).*" -hs vendor/build*.prop)
 locale=$(grep -m1 -oP "(?<=^ro.product.locale=).*" -hs {system,system/system}/build*.prop | head -1)
-[[ -z "${locale}" ]] && locale=undefined
 density=$(grep -m1 -oP "(?<=^ro.sf.lcd_density=).*" -hs {vendor,system,system/system}/build*.prop | head -1)
-[[ -z "${density}" ]] && density=undefined
 is_ab=$(grep -m1 -oP "(?<=^ro.build.ab_update=).*" -hs {system,system/system,vendor}/build*.prop)
 [[ -z "${is_ab}" ]] && is_ab="false"
 treble_support=$(grep -m1 -oP "(?<=^ro.treble.enabled=).*" -hs {system,system/system}/build*.prop)
 [[ -z "${treble_support}" ]] && treble_support="false"
 branch=master
 transname=$(grep -m1 -oP "(?<=^ro.product.product.tran.device.name.default=).*" -hs product/etc/build.prop | head -1)
-[[ -z "${transname}" ]] && transname="undefined"
 osver=$(grep -m1 -oP "(?<=^ro.os.version.release=).*" -hs product/etc/build.prop | head -1)
-[[ -z "${osver}" ]] && osver="undefined"
 xosver=$(grep -m1 -oP "(?<=^ro.tranos.version=).*" -hs product/etc/build.prop | head -1)
-[[ -z "${xosver}" ]] && xosver="undefined"
 sec_patch=$(grep -m1 -oP "(?<=^ro.build.version.security_patch=).*" -hs {system,system/system}/build*.prop | head -1)
-[[ -z "${sec_patch}" ]] && sec_patch="undefined"
 xosid=$(grep -m1 -oP "(?<=^ro.build.display.id=).*" -hs tr_product/etc/build.prop | head -1)
 [[ -z "${xosid}" ]] && xosid=$(grep -m1 -oP "(?<=^ro.build.display.id=).*" -hs product/etc/build.prop | head -1)
-[[ -z "${xosid}" ]] && xosid="undefined"
 
 if [[ "$PUSH_TO_GITLAB" = true ]]; then
 	rm -rf .github_token
@@ -1006,26 +999,35 @@ if [ -f "$TSFILE" ]; then
   cp TranSettingsApkResOverlay/res/values/strings.xml TranSettingsApkResOverlay.xml
   rm -rf TranSettingsApkResOverlay
 fi
+ISFILE=product/overlay/ItelSettingsResOverlay/ItelSettingsResOverlay.apk
+if [ -f "$ISFILE" ]; then
+  apktool d $ISFILE
+  ts_chipset=" ($(grep -oP '(?<=<string name="cpu_rate_cores">).*(?=</string>)' -ar ItelSettingsResOverlay/res/values/strings.xml))"
+  cp ItelSettingsResOverlay/res/values/strings.xml ItelSettingsResOverlay.xml
+  rm -rf ItelSettingsResOverlay
+fi
 
 # Repo README File
 cat <<EOF > "${OUTDIR}"/README.md
 ## FIRMWARE DUMP
 ### ${description}
-- Transsion Name: ${transname}
-- TranOS Build: ${xosid}
-- TranOS Version: ${xosver}
-- Brand: ${manufacturer}
-- Model: ${codename}
-- Platform: ${platform}${ts_chipset}
-- Android Build: ${id}
-- Android Version: ${release}
-- Kernel Version: ${kernel_version}
-- Security Patch: ${sec_patch}
-- CPU Abilist: ${abilist}
-- A/B Device: ${is_ab}
-- Treble Device: ${treble_support}
-- Screen Density: ${density}
 EOF
+
+[ ! -z "${transname}" ] && echo "- Transsion Name: ${transname}" >> "${OUTDIR}"/README.md
+[ ! -z "${xosid}" ] && echo "- TranOS Build: ${xosid}" >> "${OUTDIR}"/README.md
+[ ! -z "${xosver}" ] && echo "- TranOS Version: ${xosver}" >> "${OUTDIR}"/README.md
+[ ! -z "${manufacturer}" ] && echo "- Brand: ${manufacturer}" >> "${OUTDIR}"/README.md
+[ ! -z "${codename}" ] && echo "- Model: ${codename}" >> "${OUTDIR}"/README.md
+[ ! -z "${platform}" ] && echo "- Platform: ${platform}${ts_chipset}" >> "${OUTDIR}"/README.md
+[ ! -z "${id}" ] && echo "- Android Build: ${id}" >> "${OUTDIR}"/README.md
+[ ! -z "${release}" ] && echo "- Android Version: ${release}" >> "${OUTDIR}"/README.md
+[ ! -z "${kernel_version}" ] && echo "- Kernel Version: ${kernel_version}" >> "${OUTDIR}"/README.md
+[ ! -z "${sec_patch}" ] && echo "- Security Patch: ${sec_patch}" >> "${OUTDIR}"/README.md
+[ ! -z "${abilist}" ] && echo "- CPU Abilist: ${abilist}" >> "${OUTDIR}"/README.md
+[ ! -z "${is_ab}" ] && echo "- A/B Device: ${is_ab}" >> "${OUTDIR}"/README.md
+[ ! -z "${treble_support}" ] && echo "- Treble Device: ${treble_support}" >> "${OUTDIR}"/README.md
+[ ! -z "${density}" ] && echo "- Screen Density: ${density}" >> "${OUTDIR}"/README.md
+
 cat "${OUTDIR}"/README.md
 
 # Generate TWRP Trees
