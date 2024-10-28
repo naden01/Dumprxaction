@@ -71,7 +71,7 @@ fi
 # Sanitize And Generate Folders
 INPUTDIR="${PROJECT_DIR}"/input		# Firmware Download/Preload Directory
 UTILSDIR="${PROJECT_DIR}"/utils		# Contains Supportive Programs
-OUTDIR=/tmp/out						# Contains Final Extracted Files
+OUTDIR=/work/out					# Contains Final Extracted Files
 TMPDIR="${OUTDIR}"/tmp				# Temporary Working Directory
 
 rm -rf "${TMPDIR}" 2>/dev/null
@@ -133,7 +133,7 @@ AFHDL="${UTILSDIR}"/downloaders/afh_dl.py
 FSCK_EROFS=${UTILSDIR}/bin/fsck.erofs
 
 # Partition List That Are Currently Supported
-PARTITIONS="system system_ext system_other systemex vendor cust odm oem factory product xrom dtbo dtb boot vendor_boot recovery tz oppo_product preload_common opproduct reserve india my_preload my_odm my_stock my_operator my_country my_product my_company my_engineering my_heytap my_custom my_manifest my_carrier my_region my_bigball my_version special_preload system_dlkm vendor_dlkm odm_dlkm init_boot vendor_kernel_boot odmko socko nt_log mi_ext hw_product preavs preavs preload version tr_product"
+PARTITIONS="system system_ext system_other systemex vendor cust odm oem factory product xrom dtbo dtb boot boot-gki vendor_boot recovery tz oppo_product preload_common opproduct reserve india my_preload my_odm my_stock my_operator my_country my_product my_company my_engineering my_heytap my_custom my_manifest my_carrier my_region my_bigball my_version special_preload system_dlkm vendor_dlkm odm_dlkm init_boot vendor_kernel_boot odmko socko nt_log mi_ext hw_product preavs preavs preload version tr_product"
 EXT4PARTITIONS="system vendor cust odm oem factory product xrom systemex oppo_product preload_common"
 OTHERPARTITIONS="tz.mbn:tz tz.img:tz modem.img:modem NON-HLOS:modem boot-verified.img:boot recovery-verified.img:recovery dtbo-verified.img:dtbo"
 
@@ -772,6 +772,34 @@ if [[ -f "${OUTDIR}"/boot.img ]]; then
 	}
 fi
 
+# Extract boot-gki.img
+if [[ -f "${OUTDIR}"/boot-gki.img ]]; then
+	# Extract dts
+	mkdir -p "${OUTDIR}"/bootimg "${OUTDIR}"/bootdts 2>/dev/null
+	python3 "${DTB_EXTRACTOR}" "${OUTDIR}"/boot-gki.img -o "${OUTDIR}"/bootimg >/dev/null
+	find "${OUTDIR}"/bootimg -name '*.dtb' -type f | gawk -F'/' '{print $NF}' | while read -r i; do "${DTC}" -q -s -f -I dtb -O dts -o bootdts/"${i/\.dtb/.dts}" bootimg/"${i}"; done 2>/dev/null
+	bash "${UNPACKBOOT}" "${OUTDIR}"/boot-gki.img "${OUTDIR}"/boot 2>/dev/null
+	printf "Boot extracted\n"
+	# extract-ikconfig
+	mkdir -p "${OUTDIR}"/bootRE
+	bash "${EXTRACT_IKCONFIG}" "${OUTDIR}"/boot-gki.img > "${OUTDIR}"/bootRE/ikconfig 2> /dev/null
+	[[ ! -s "${OUTDIR}"/bootRE/ikconfig ]] && rm -f "${OUTDIR}"/bootRE/ikconfig 2>/dev/null
+	# vmlinux-to-elf
+	if [[ ! -f "${OUTDIR}"/vendor_boot.img ]]; then
+		python3 "${KALLSYMS_FINDER}" "${OUTDIR}"/boot-gki.img > "${OUTDIR}"/bootRE/boot_kallsyms.txt >/dev/null 2>&1
+		printf "boot_kallsyms.txt generated\n"
+	else
+		python3 "${KALLSYMS_FINDER}" "${OUTDIR}"/boot/kernel > "${OUTDIR}"/bootRE/kernel_kallsyms.txt >/dev/null 2>&1
+		printf "kernel_kallsyms.txt generated\n"
+	fi
+	python3 "${VMLINUX2ELF}" "${OUTDIR}"/boot-gki.img "${OUTDIR}"/bootRE/boot.elf >/dev/null 2>&1
+	printf "boot.elf generated\n"
+	[[ -f "${OUTDIR}"/boot/dtb.img ]] && {
+		mkdir -p "${OUTDIR}"/dtbimg 2>/dev/null
+		python3 "${DTB_EXTRACTOR}" "${OUTDIR}"/boot/dtb.img -o "${OUTDIR}"/dtbimg >/dev/null
+	}
+fi
+
 # Extract vendor_boot.img
 if [[ -f "${OUTDIR}"/vendor_boot.img ]]; then
 	# Extract dts
@@ -811,7 +839,7 @@ ls -lAog
 
 # Extract Partitions
 for p in $PARTITIONS; do
-	if ! echo "${p}" | grep -q "boot\|recovery\|dtbo\|vendor_boot\|tz"; then
+	if ! echo "${p}" | grep -q "boot\|boot-gki\|recovery\|dtbo\|vendor_boot\|tz"; then
 		if [ -f $p.img ] && [ $p != "modem" ]; then
 			echo "Trying to extract $p partition via fsck.erofs."
                         file "$p".img
@@ -850,7 +878,7 @@ done
 
 # Remove Unnecessary Image Leftover From OUTDIR
 for q in *.img; do
-	if ! echo "${q}" | grep -q "boot\|recovery\|dtbo\|tz"; then
+	if ! echo "${q}" | grep -q "boot\|boot-gki\|recovery\|dtbo\|tz"; then
 		rm -f "${q}" 2>/dev/null
 	fi
 done
@@ -910,7 +938,9 @@ manufacturer=$(grep -m1 -oP "(?<=^ro.product.system_ext.manufacturer=).*" -hs sy
 [[ -z "${manufacturer}" ]] && manufacturer=$(grep -m1 -oP "(?<=^ro.product.product.manufacturer=).*" -hs vendor/euclid/product/build*.prop)
 [[ -z "${manufacturer}" ]] && manufacturer=$(grep -m1 -oP "(?<=^ro.product.vendor.manufacturer=).*" -hs vendor/build*.prop)
 [[ -z "${manufacturer}" ]] && manufacturer=$(grep -m1 -oP "(?<=^ro.product.system.manufacturer=).*" -hs {system,system/system}/build*.prop)
-fingerprint=$(grep -m1 -oP "(?<=^ro.system_ext.build.fingerprint=).*" -hs system_ext/etc/build.prop)
+fingerprint=$(grep -m1 -oP "(?<=^ro.tr_product.build.fingerprint=).*" -hs tr_product/etc/build.prop)
+[[ -z "${fingerprint}" ]] && fingerprint=$(grep -m1 -oP "(?<=^ro.product.build.fingerprint=).*" -hs product/etc/build.prop)
+[[ -z "${fingerprint}" ]] && fingerprint=$(grep -m1 -oP "(?<=^ro.system_ext.build.fingerprint=).*" -hs system_ext/etc/build.prop)
 [[ -z "${fingerprint}" ]] && fingerprint=$(grep -m1 -oP "(?<=^ro.build.fingerprint=).*" -hs {system,system/system}/build*.prop | head -1)
 [[ -z "${fingerprint}" ]] && fingerprint=$(grep -m1 -oP "(?<=^ro.vendor.build.fingerprint=).*" -hs vendor/build*.prop | head -1)
 [[ -z "${fingerprint}" ]] && fingerprint=$(grep -m1 -oP "(?<=^ro.system.build.fingerprint=).*" -hs {system,system/system}/build*.prop)
@@ -1027,6 +1057,7 @@ EOF
 [ ! -z "${is_ab}" ] && echo "- A/B Device: ${is_ab}" >> "${OUTDIR}"/README.md
 [ ! -z "${treble_support}" ] && echo "- Treble Device: ${treble_support}" >> "${OUTDIR}"/README.md
 [ ! -z "${density}" ] && echo "- Screen Density: ${density}" >> "${OUTDIR}"/README.md
+[ ! -z "${density}" ] && echo "- Fingerprint: ${fingerprint}" >> "${OUTDIR}"/README.md
 
 cat "${OUTDIR}"/README.md
 
@@ -1414,6 +1445,7 @@ elif [[ -s "${PROJECT_DIR}"/.gitlab_token ]]; then
 			printf "\n<b>Android Ver: %s</b>" "${release}"
 			[ ! -z "${kernel_version}" ] && printf "\n<b>Kernel Ver: %s</b>" "${kernel_version}"
 			printf "\n<b>Security Patch: %s</b>" "${sec_patch}"
+			printf "\n<b>Fingerprint: %s</b>" "${fingerprint}"
 			printf "\n<a href=\"${GITLAB_HOST}/%s/%s/-/tree/%s/\">Gitlab Tree</a>" "${GIT_ORG}" "${repo}" "${branch}"
 		} >> "${OUTDIR}"/tg.html
 		TEXT=$(< "${OUTDIR}"/tg.html)
