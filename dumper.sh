@@ -71,7 +71,7 @@ fi
 # Sanitize And Generate Folders
 INPUTDIR="${PROJECT_DIR}"/input		# Firmware Download/Preload Directory
 UTILSDIR="${PROJECT_DIR}"/utils		# Contains Supportive Programs
-OUTDIR="${PROJECT_DIR}"/out			# Contains Final Extracted Files
+OUTDIR=/work/out					# Contains Final Extracted Files
 TMPDIR="${OUTDIR}"/tmp				# Temporary Working Directory
 
 rm -rf "${TMPDIR}" 2>/dev/null
