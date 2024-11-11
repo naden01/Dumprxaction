@@ -72,7 +72,6 @@ fi
 INPUTDIR="${PROJECT_DIR}"/input		# Firmware Download/Preload Directory
 UTILSDIR="${PROJECT_DIR}"/utils		# Contains Supportive Programs
 OUTDIR=/work/out					# Contains Final Extracted Files
-TMPDIR="${OUTDIR}"/tmp				# Temporary Working Directory
 
 rm -rf "${TMPDIR}" 2>/dev/null
 mkdir -p "${OUTDIR}" "${TMPDIR}" 2>/dev/null
